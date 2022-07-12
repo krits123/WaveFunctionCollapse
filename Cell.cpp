@@ -76,13 +76,17 @@ int Cell::entropy()
 
 void Cell::pickRandOption(std::vector<Tile*> tiles)
 {
-	if(m_options.size()==0)
-		m_tile = tiles[tiles.size()-1];
+	if (m_options.size() == 0) {
+		m_tile = tiles[0];
+		m_options.push_back(0);
+	}
 	else if(m_options.size() == 1)
 		m_tile = tiles[m_options[0]];
 	else {
 		int idx = rand() % m_options.size();
-		m_tile = tiles[m_options[idx]];
-		
+		int tmp = m_options[idx];
+		m_tile = tiles[tmp];
+		m_options.clear();
+		m_options.push_back(tmp);
 	}
 }

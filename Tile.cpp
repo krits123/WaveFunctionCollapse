@@ -2,7 +2,7 @@
 
 
 
-Tile::Tile(int id,std::string sUP, std::string sRIGHT, std::string sDOWN, std::string sLEFT,olc::Sprite *tileSprite,olc::PixelGameEngine* engine)
+Tile::Tile(int id, int sUP, int sRIGHT, int sDOWN, int sLEFT, olc::Sprite* tileSprite, olc::PixelGameEngine* engine)
 {
 	m_engine = engine;
 	m_sides.push_back(sUP);

@@ -8,8 +8,8 @@
 #include <cstdlib>
 #include <time.h>
 
-#define WIDTH  952
-#define HEIGHT  952
+#define WIDTH  1064
+#define HEIGHT  1064
 
 #define UP 0
 #define RIGHT 1
@@ -23,18 +23,16 @@
 // - Could use results of previous sorting 
 // - Consider searching in options with binary search since its most ilkely sorted by design
 // - Maybe options are stored in a list for easy removal and finding 
-// - Implement Backtracking for non-complete sets of tiles
+// - Implement Entropy Propagation for Each Iteration || DONE
 // - Define Width and height and tile size better
 // - Tile and Cell Classes have redudant and useless info, make them minimal and better
 // - Maybe don t draw everything from the start on each loop || DONE
-// - Draw something if it was never drawn before
+// - Draw something if it was never drawn before || DONE
 // - Implement roattion of encoding 
-// - Don t roatet everything some tiles have 90 or 180 rotatinal symmetry
+// - Don t roatet everything some tiles have 90 or 180 rotatinal symmetry || DONE
 // - Implement rap around or Define stoping blocks for the edges
 // - Better use of setters and getters for classes not every member shoyld be public
-// - Tidy up updateNeibsEntropy(x,y) through better acces of cell options and tiles encoding
 // - FPS is too low should reach at least 15 - 20 (or >30) || DONE 
-// - Move the code on github and on a seperate project 
 // - Check if tile pngs exist
 // - Store them in the tiles vector with an automatic way
 
@@ -58,7 +56,7 @@ private:
 	olc::Sprite* spr6;
 	olc::Sprite* spr7;
 	olc::Sprite* spr8;
-
+	std::vector<std::vector<int>> LUT;
 
 	std::vector<olc::Sprite*> sprs;
 
@@ -120,104 +118,220 @@ private:
 		return (y) + (x)* gridSize;
 	}
 
-	void updateNeibsEntropy(int x, int y) {
+	
+	// This Function Updates the entropies of the entire Tile Map Starting From the Tile at (x,y) which just collpased and propagates the information outwards
+	void updateEntropies(int x, int y) {
 
-		// TODO:
-		// Implement rap around or Define stoping blocks for the edges
+
+		int maxItr = std::max({ x,y,gridSize - x - 1,gridSize - y - 1 });
 
 
-		// Update Top Neibhor if he exists
-		if (y > 0) {
 
-			int idx = indexOfCell(x, y - 1);
-			Cell* cellAdj = cellGrid[idx];
+		int idx = 1;
 
-			std::vector<int> toRemove;
-			std::string target = cellGrid[indexOfCell(x, y)]->m_tile->m_sides[UP];
+		while (idx <= maxItr) {
 
-			for (int i = 0;i < cellAdj->m_options.size();i++) {
 
-				if (   tiles[cellAdj->m_options[i]]->m_sides[DOWN] != target    )
-					toRemove.push_back(cellAdj->m_options[i]);
+
+			int x1;
+			int y1;
+			// RIGHT MAX DIST
+			x1 = x + idx;
+			y1 = y;
+			if (checkInBounds(x1, y1)) {
+
+				updateFromNeibhor(x1, y1, x1 -1, y1,LEFT);
 			}
 
 
-			for (int i = 0;i < toRemove.size();i++) {
-				cellAdj->removeOption(toRemove[i]);
+			// DOWN MAX DIST
+			x1 = x;
+			y1 = y + idx;
+			if (checkInBounds(x1, y1)) {
+
+				updateFromNeibhor(x1, y1, x1, y1 - 1,UP);
 			}
 
+			// LEFT MAX DIST
+			x1 = x - idx;
+			y1 = y;
+			if (checkInBounds(x1, y1)) {
+
+				updateFromNeibhor(x1, y1, x1 + 1, y1,RIGHT);
+			}
+
+			// TOP MAX DIST
+			x1 = x;
+			y1 = y - idx;
+			if (checkInBounds(x1, y1)) {
+
+				updateFromNeibhor(x1, y1, x1, y1 + 1,DOWN);
+			}
+
+
+			for (int i = 1;i < idx;i++) {
+
+
+				// RIGHT + UP
+				x1 = x + i;
+				y1 = y - idx + i;
+				if (checkInBounds(x1,y1)) {
+
+					updateFromNeibhor(x1, y1, x1 - 1, y1,LEFT);
+
+					updateFromNeibhor(x1, y1, x1 , y1 + 1,DOWN);
+
+				}
+
+				// RIGHT + DOWN
+				x1 = x + i;
+				y1 = y + idx - i;
+				if (checkInBounds(x1, y1)) {
+
+					updateFromNeibhor(x1, y1, x1 - 1, y1,LEFT);
+
+					updateFromNeibhor(x1, y1, x1, y1 - 1,UP);
+
+				}
+				// LEFT + DOWN
+				x1 = x - i;
+				y1 = y + idx - i;
+				if (checkInBounds(x1, y1)) {
+
+					updateFromNeibhor(x1, y1, x1 + 1, y1,RIGHT);
+
+					updateFromNeibhor(x1, y1, x1, y1 -1,UP);
+
+				}
+				// LEFT + UP
+				x1 = x - i;
+				y1 = y - idx + i;
+				if (checkInBounds(x1, y1)) {
+
+					updateFromNeibhor(x1, y1, x1 + 1, y1,RIGHT);
+
+					updateFromNeibhor(x1, y1, x1, y1 + 1,DOWN);
+
+				}
+
+
+
+
+			}
+
+
+			idx++;
 		}
 
-
-		// Update Right Neibhor if He exists
-		if (x < gridSize-1) {
-
-			int idx = indexOfCell(x+1, y );
-			Cell * cellAdj = cellGrid[idx];
-
-			std::vector<int> toRemove;
-			std::string target = cellGrid[indexOfCell(x, y)]->m_tile->m_sides[RIGHT];
-
-			for (int i = 0;i < cellAdj->m_options.size();i++) {
-
-				if (tiles[cellAdj->m_options[i]]->m_sides[LEFT] != target)
-					toRemove.push_back(cellAdj->m_options[i]);
-			}
-
-
-			for (int i = 0;i < toRemove.size();i++) {
-				cellAdj->removeOption(toRemove[i]);
-			}
-
-		}
-
-		// Update Down Neibhor if He exists
-		if (y < gridSize - 1) {
-
-			int idx = indexOfCell(x, y+1);
-			Cell* cellAdj = cellGrid[idx];
-
-			std::vector<int> toRemove;
-			std::string target = cellGrid[indexOfCell(x, y)]->m_tile->m_sides[DOWN];
-
-			for (int i = 0;i < cellAdj->m_options.size();i++) {
-
-				if (tiles[cellAdj->m_options[i]]->m_sides[UP] != target)
-					toRemove.push_back(cellAdj->m_options[i]);
-			}
-
-
-			for (int i = 0;i < toRemove.size();i++) {
-				cellAdj->removeOption(toRemove[i]);
-			}
-
-		}
-
-
-		// Update Down Neibhor if He exists
-		if (x>0) {
-
-			int idx = indexOfCell(x-1, y);
-			Cell * cellAdj = cellGrid[idx];
-
-			std::vector<int> toRemove;
-			std::string target = cellGrid[indexOfCell(x, y)]->m_tile->m_sides[LEFT];
-
-			for (int i = 0;i < cellAdj->m_options.size();i++) {
-
-				if (tiles[cellAdj->m_options[i]]->m_sides[RIGHT] != target)
-					toRemove.push_back(cellAdj->m_options[i]);
-			}
-
-
-			for (int i = 0;i < toRemove.size();i++) {
-				cellAdj->removeOption(toRemove[i]);
-			}
-
-		}
 
 	}
 
+	// This Function Updates the valiable options of the cell at (x,y) based on the options of the cell at (x1,y1).
+	// The 2 cells are neibhors 
+	// The dir variable stores on which side of the current cell (x,y) is the cell (x1,y1) . It is redudant but it helps avoiding some checks which makes the code faster and clean.
+	void updateFromNeibhor(int x, int y, int x1, int y1,int dir) {
+
+
+		if (cellGrid[indexOfCell(x, y)]->entropy() > tiles.size())
+			return;
+
+		int adjDir = (dir + 2) % 4;
+		int idx = indexOfCell(x1, y1);
+		Cell* cellAdj = cellGrid[idx];
+
+		std::vector<int> toRemove;
+		std::vector<int> targetOptions = cellGrid[indexOfCell(x, y)]->m_options;
+
+
+		for (int i = 0;i < targetOptions.size();i++) {
+			Tile* currentTile = tiles[targetOptions[i]];
+			int target = currentTile->m_sides[dir];
+			bool removeOpt = true;
+			for (int j = 0;j < cellAdj->m_options.size();j++) {
+
+				if (tiles[cellAdj->m_options[j]]->m_sides[adjDir] == target) {
+					removeOpt = false;
+					break;
+				}
+					
+			}
+			if (removeOpt)
+				toRemove.push_back(targetOptions[i]);
+
+		}
+
+		for (int i = 0;i < toRemove.size();i++) {
+			cellGrid[indexOfCell(x, y)]->removeOption(toRemove[i]);
+		}
+
+		
+
+		return;
+	}
+
+	bool checkInBounds(int x, int y) {
+		return   (y < gridSize) && (y >= 0) && (x < gridSize) && (x >= 0);
+	}
+
+	
+
+	
+
+
+	// For each available tile generate a LUT that maps [tile,side] => [matching tiles] 
+	void generateTileLUT() {
+
+		int cols = 4;
+		int rows = tiles.size();
+
+		for (int i = 0;i < rows;i++) {
+			for (int j = 0;j < cols;j++) {
+
+				std::vector<int> matches;
+
+				int target = tiles[i]->m_sides[j];
+				int dir = (j + 2) % 4;  // This variable containts the matching direction. 
+
+				for (int tid = 0; tid < tiles.size();tid++) {
+					if (target == tiles[tid]->m_sides[dir])
+						matches.push_back(tid);
+				}
+
+				LUT.push_back(matches);
+
+			}
+		}
+
+
+	}
+
+	void printLUT() {
+
+
+		std::string dirs[4] = { "UP","RIGHT","DOWN","LEFT" };
+
+		for (int i = 0; i < tiles.size();i++) {
+			for (int j = 0; j < 4;j++) {
+				std::vector<int> matches(getFromLUT(j, i));
+				std::cout << "Tile from id :" << i << " and dir : " << dirs[j] << " matches with tiles : ";
+				for (int k = 0;k < matches.size();k++) {
+					std::cout << matches[k] << " ";
+				}
+				std::cout << std::endl;
+			}
+			std::cout << "------------------------------------------------------------" << std::endl;
+		}
+
+
+
+	}
+
+	std::vector<int> getFromLUT(int dir, int tileID) {
+
+
+		return LUT[4 * tileID + dir];
+
+	}
 
 public:
 
@@ -228,6 +342,30 @@ public:
 
 	bool OnUserCreate() override
 	{
+
+		/*std::vector<olc::vi2d> ps;
+		getManhatanDistancesConsts(1, ps);
+		
+		std::cout << "Pairs with dist 1 :  " << std::endl;
+		for (int i = 0; i < ps.size();i++)
+			std::cout << ps[i].x << " ," << ps[i].y << std::endl;
+		ps.clear();
+		getManhatanDistancesConsts(2, ps);
+		std::cout << "Pairs with dist 1 :  " << std::endl;
+		for (int i = 0; i < ps.size();i++)
+			std::cout << ps[i].x << " ," << ps[i].y << std::endl;
+		ps.clear();
+		getManhatanDistancesConsts(3, ps);
+		std::cout << "Pairs with dist 1 :  " << std::endl;
+		for (int i = 0; i < ps.size();i++)
+			std::cout << ps[i].x << " ," << ps[i].y << std::endl;
+		ps.clear();
+		getManhatanDistancesConsts(4, ps);
+		std::cout << "Pairs with dist 1 :  " << std::endl;
+		for (int i = 0; i < ps.size();i++)
+			std::cout << ps[i].x << " ," << ps[i].y << std::endl;
+		*/
+
 		// Called once at the start, so create things here
 		srand(time(0));
 
@@ -314,9 +452,22 @@ public:
 		// This is extremly BAD!!!!
 		// I need to HARDCODE the side encoding 
 		// SHould be done with a confige FILE
+		/*
 		std::string G = "GGG";
-
 		std::string BBB= "BBB";
+		std::string BGG = "BGG";
+		std::string GGB = "GGB";
+		std::string GLG = "GLG";
+		std::string GAG = "GAG";
+		*/
+		int G   = 0;
+		int BBB = 1;
+		int BGG = 2;
+		int GGB = 3;
+		int GLG = 4;
+		int GAG = 5;
+
+
 		// 2 Blanks 
 		tiles.push_back(new Tile(0, BBB, BBB, BBB, BBB, sprs[0], this));
 		tiles.push_back(new Tile(1, G, G, G, G, sprs[1], this));
@@ -324,92 +475,85 @@ public:
 
 
 		// Tile 2 
-		std::string GLG = "GLG";
 		
-		tiles.push_back(new Tile(3, G, GLG, G, G, sprs[2], this));
-		tiles.push_back(new Tile(4, G, G, GLG, G, sprs[3], this));
-		tiles.push_back(new Tile(5, G, G, G, GLG, sprs[4], this));
-		tiles.push_back(new Tile(6, GLG, G, G, G, sprs[5], this));
+		
+		tiles.push_back(new Tile(2, G, GLG, G, G, sprs[2], this));
+		tiles.push_back(new Tile(3, G, G, GLG, G, sprs[3], this));
+		tiles.push_back(new Tile(4, G, G, G, GLG, sprs[4], this));
+		tiles.push_back(new Tile(5, GLG, G, G, G, sprs[5], this));
 
 
 		// Tile 3 
-		std::string GAG = "GAG";
+		
 
-		tiles.push_back(new Tile(7, G, GAG, G, GAG, sprs[6], this));
-		tiles.push_back(new Tile(8, GAG, G, GAG, G, sprs[7], this));
-		tiles.push_back(new Tile(9, G, GAG, G, GAG, sprs[8], this));
-		tiles.push_back(new Tile(10, GAG, G, GAG, G, sprs[9], this));
+		tiles.push_back(new Tile(6, G, GAG, G, GAG, sprs[6], this));
+		tiles.push_back(new Tile(7, GAG, G, GAG, G, sprs[7], this));
+
 
 
 
 		// Tile 4
-		std::string BGG = "BGG";
-		std::string GGB = "GGB";
+		
 
-		tiles.push_back(new Tile(11, BGG, GLG, BGG,BBB, sprs[10], this));
-		tiles.push_back(new Tile(12, BBB, BGG, GLG, BGG, sprs[11], this));
-		tiles.push_back(new Tile(13, GGB, BBB, GGB, GLG, sprs[12], this));
-		tiles.push_back(new Tile(14, GLG, GGB, BBB, GGB, sprs[13], this));
+		tiles.push_back(new Tile(8, BGG, GLG, BGG,BBB, sprs[10], this));
+		tiles.push_back(new Tile(9, BBB, BGG, GLG, BGG, sprs[11], this));
+		tiles.push_back(new Tile(10, GGB, BBB, GGB, GLG, sprs[12], this));
+		tiles.push_back(new Tile(11, GLG, GGB, BBB, GGB, sprs[13], this));
 
 		// Tile 5
 		
-		tiles.push_back(new Tile(15, BGG, G, G, BGG, sprs[14], this));
-		tiles.push_back(new Tile(16, GGB, BGG, G,G, sprs[15], this));
-		tiles.push_back(new Tile(17, G, GGB, GGB, G, sprs[16], this));
-		tiles.push_back(new Tile(18, G, G, BGG, GGB, sprs[17], this));
+		tiles.push_back(new Tile(12, BGG, G, G, BGG, sprs[14], this));
+		tiles.push_back(new Tile(13, GGB, BGG, G,G, sprs[15], this));
+		tiles.push_back(new Tile(14, G, GGB, GGB, G, sprs[16], this));
+		tiles.push_back(new Tile(15, G, G, BGG, GGB, sprs[17], this));
 
 		// Tile 6
 
-		tiles.push_back(new Tile(19, G, GLG, G, GLG, sprs[18], this));
-		tiles.push_back(new Tile(20, GLG, G, GLG, G, sprs[19], this));
-		tiles.push_back(new Tile(21, G, GLG, G, GLG, sprs[20], this));
-		tiles.push_back(new Tile(22, GLG, G, GLG, G, sprs[21], this));
+		tiles.push_back(new Tile(16, G, GLG, G, GLG, sprs[18], this));
+		tiles.push_back(new Tile(17, GLG, G, GLG, G, sprs[19], this));
 
 		// Tile 7
 
-		tiles.push_back(new Tile(23, GAG, GLG, GAG, GLG, sprs[22], this));
-		tiles.push_back(new Tile(24, GLG, GAG, GLG, GAG, sprs[23], this));
-		tiles.push_back(new Tile(25, GAG, GLG, GAG, GLG, sprs[24], this));
-		tiles.push_back(new Tile(26, GLG, GAG, GLG, GAG, sprs[25], this));
+		tiles.push_back(new Tile(18, GAG, GLG, GAG, GLG, sprs[22], this));
+		tiles.push_back(new Tile(19, GLG, GAG, GLG, GAG, sprs[23], this));
+		
 
 		// Tile 8
 
-		tiles.push_back(new Tile(27, GAG, G, GLG, G, sprs[26], this));
-		tiles.push_back(new Tile(28, G, GAG, G, GLG, sprs[27], this));
-		tiles.push_back(new Tile(29, GLG, G, GAG, G, sprs[28], this));
-		tiles.push_back(new Tile(30, G, GLG, G, GAG, sprs[29], this));
+		tiles.push_back(new Tile(20, GAG, G, GLG, G, sprs[26], this));
+		tiles.push_back(new Tile(21, G, GAG, G, GLG, sprs[27], this));
+		tiles.push_back(new Tile(22, GLG, G, GAG, G, sprs[28], this));
+		tiles.push_back(new Tile(23, G, GLG, G, GAG, sprs[29], this));
 
 		// Tile 9
 
-		tiles.push_back(new Tile(31, GLG, GLG, G, GLG, sprs[30], this));
-		tiles.push_back(new Tile(32, GLG, GLG, GLG, G, sprs[31], this));
-		tiles.push_back(new Tile(33, G, GLG, GLG, GLG, sprs[32], this));
-		tiles.push_back(new Tile(34, GLG, G, GLG, GLG, sprs[33], this));
+		tiles.push_back(new Tile(24, GLG, GLG, G, GLG, sprs[30], this));
+		tiles.push_back(new Tile(25, GLG, GLG, GLG, G, sprs[31], this));
+		tiles.push_back(new Tile(26, G, GLG, GLG, GLG, sprs[32], this));
+		tiles.push_back(new Tile(27, GLG, G, GLG, GLG, sprs[33], this));
 
 		// Tile 10
 
-		tiles.push_back(new Tile(35, GLG, GLG, GLG, GLG, sprs[34], this));
-		tiles.push_back(new Tile(36, GLG, GLG, GLG, GLG, sprs[35], this));
-		tiles.push_back(new Tile(37, GLG, GLG, GLG, GLG, sprs[36], this));
-		tiles.push_back(new Tile(38, GLG, GLG, GLG, GLG, sprs[37], this));
+		tiles.push_back(new Tile(28, GLG, GLG, GLG, GLG, sprs[34], this));
+		tiles.push_back(new Tile(29, GLG, GLG, GLG, GLG, sprs[35], this));
+		
 
 		// Tile 11
 
-		tiles.push_back(new Tile(39, GLG, GLG, G, G, sprs[38], this));
-		tiles.push_back(new Tile(40, G, GLG, GLG, G, sprs[39], this));
-		tiles.push_back(new Tile(41, G, G, GLG, GLG, sprs[40], this));
-		tiles.push_back(new Tile(42, GLG, G, G, GLG, sprs[41], this));
+		tiles.push_back(new Tile(30, GLG, GLG, G, G, sprs[38], this));
+		tiles.push_back(new Tile(31, G, GLG, GLG, G, sprs[39], this));
+		tiles.push_back(new Tile(32, G, G, GLG, GLG, sprs[40], this));
+		tiles.push_back(new Tile(33, GLG, G, G, GLG, sprs[41], this));
 
 		// Tile 12
 
-		tiles.push_back(new Tile(43, G, GLG, G, GLG, sprs[42], this));
-		tiles.push_back(new Tile(44, GLG, G, GLG, G, sprs[43], this));
-		tiles.push_back(new Tile(45, G, GLG, G, GLG, sprs[44], this));
-		tiles.push_back(new Tile(46, GLG, G, GLG, G, sprs[45], this));
+		tiles.push_back(new Tile(34, G, GLG, G, GLG, sprs[42], this));
+		tiles.push_back(new Tile(35, GLG, G, GLG, G, sprs[43], this));
+		
 
 
-		sprs.push_back(new olc::Sprite("circuit\\13.png"));
-		tiles.push_back(new Tile(46, BBB, BBB, BBB, BBB,sprs[46], this));
+		//sprs.push_back(new olc::Sprite("circuit\\13.png"));
+		//tiles.push_back(new Tile(46, -1, -1, -1, -1,sprs[46], this));
 
 		int x0 = 5;
 		int y0 = 4;
@@ -434,16 +578,14 @@ public:
 		// Update Entropy of Neibhors of Original Tile
 
 
-		updateNeibsEntropy(x0, y0);
-
+		//updateNeibsEntropy(x0, y0);
+		updateEntropies(x0, y0);
 		std::vector<Cell*> cellGridCopy(cellGrid);
 
 		std::sort(cellGridCopy.begin(), cellGridCopy.end(), cmpFun);
 
 
-	//	std::cout << "Options of 1st cell : " << cellGridCopy[1]->m_options.size() << std::endl;
-		//for (int i = 0; i < cellGridCopy[1]->m_options.size();i++)
-		//	std::cout << cellGridCopy[1]->m_options[i] << std::endl;
+
 		return true;
 	}
 
@@ -454,27 +596,37 @@ public:
 
 		// Draw the grid
 
+		if (GetKey(olc::Key::W).bReleased) {
+			std::vector<Cell*> cellGridCopy(cellGrid);
 
-		std::vector<Cell*> cellGridCopy(cellGrid);
-
-		std::sort(cellGridCopy.begin(), cellGridCopy.end(), cmpFun);
-		int midx = 0;
-		for (int i = 0;i < cellGridCopy.size()-1;i++) {
-			if (cellGridCopy[i + 1]->entropy() > cellGridCopy[i]->entropy()) {
-				midx = i;
-				break;
+			std::sort(cellGridCopy.begin(), cellGridCopy.end(), cmpFun);
+			int midx = 0;
+			for (int i = 0;i < cellGridCopy.size() - 1;i++) {
+				if (cellGridCopy[i + 1]->entropy() > cellGridCopy[i]->entropy()) {
+					midx = i;
+					break;
+				}
+			}
+			int cellIdx = 0;
+			if (midx > 0)
+				cellIdx = rand() % midx;
+			if (cellGridCopy[cellIdx]->entropy() <= tiles.size()) {
+				//std::cout << "Got here \n";
+				cellGridCopy[cellIdx]->pickRandOption(tiles);
+				updateEntropies(cellGridCopy[cellIdx]->m_x, cellGridCopy[cellIdx]->m_y);
+			}
+			for (int i = 0;i < cellGrid.size();i++) {
+				cellGrid[i]->drawCell(olc::WHITE);
 			}
 		}
-		int cellIdx = 0;
-		if (midx > 0)
-			cellIdx = rand() % midx;
-		if (cellGridCopy[cellIdx]->entropy() <= tiles.size()) {
-			cellGridCopy[cellIdx]->pickRandOption(tiles);
-			updateNeibsEntropy(cellGridCopy[cellIdx]->m_x, cellGridCopy[cellIdx]->m_y);
+
+		if (GetKey(olc::Key::D).bReleased) {
+			int a = -1;
 		}
-		for (int i = 0;i < cellGrid.size();i++) {
-			cellGrid[i]->drawCell(olc::WHITE);
-		}
+		
+		
+				
+		
 
 		return true;
 	}
